@@ -2,11 +2,12 @@ import os
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 from urllib.parse import quote
 
-import boto3  # type: ignore[import-untyped]
+import boto3
 from botocore.exceptions import ClientError  # type: ignore[import-untyped]
+from mypy_boto3_s3.type_defs import ObjectIdentifierTypeDef, ObjectTypeDef
 from tqdm import tqdm
 
 
@@ -18,11 +19,23 @@ class S3UploadedObject:
     file_size: int
 
 
+class S3ProgressCallback:
+    """Thread-safe callback for tracking upload progress across multiple files."""
+
+    def __init__(self, pbar: tqdm) -> None:
+        self._pbar = pbar
+        self._lock = threading.Lock()
+
+    def __call__(self, bytes_amount: int) -> None:
+        with self._lock:
+            self._pbar.update(bytes_amount)
+
+
 class S3Client:
     def __init__(self, access_key: str, secret_key: str, region: str) -> None:
         self.s3 = boto3.client("s3", aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region)
 
-    def get_bucket_files(self, bucket_name: str, prefix: str, filter_func: Optional[Callable[[dict[str, Any]], bool]] = None) -> List[str]:
+    def get_bucket_files(self, bucket_name: str, prefix: str, filter_func: Optional[Callable[[ObjectTypeDef], bool]] = None) -> List[str]:
         """
         Retrieve a list of files from an S3 bucket with optional filtering.
         Args:
@@ -86,7 +99,7 @@ class S3Client:
         if show_progress_bar:
             pbar = tqdm(total=file_size, unit="B", unit_scale=True, desc=filename)
 
-        self.s3.download_file(bucket_name, key, local_path, Callback=lambda bytes_transferred: pbar.update(bytes_transferred) if pbar else None)
+        self.s3.download_file(bucket_name, key, str(local_path), Callback=lambda bytes_transferred: pbar.update(bytes_transferred) if pbar else None)
 
         if pbar:
             pbar.close()
@@ -99,107 +112,66 @@ class S3Client:
         """Upload all files in a local folder to S3 and return list of uploaded files."""
         local_path = Path(local_folder)
 
-        if not local_path.exists():
-            print(f"Error: Local folder '{local_folder}' does not exist.")
-            return False, []
-
         if not local_path.is_dir():
-            print(f"Error: '{local_folder}' is not a directory.")
+            print(f"Error: '{local_folder}' is not a valid directory.")
             return False, []
 
-        uploaded_files = 0
-        uploaded_objects = []  # Store info about uploaded files
-
-        # Collect all files first to show overall progress
-        @dataclass
-        class FileInfo:
-            file_path: Path
-            file_size: int
-
+        # 1. Gather file info
         all_files = []
         total_size = 0
-
         for file_path in local_path.rglob("*"):
             if file_path.is_file():
-                file_size = file_path.stat().st_size
-                all_files.append(FileInfo(file_path, file_size))
-                total_size += file_size
+                size = file_path.stat().st_size
+                all_files.append((file_path, size))
+                total_size += size
 
         if not all_files:
-            print(f"No files found in '{local_folder}'")
             return False, []
 
-        print(f"Found {len(all_files)} files ({total_size / (1024 * 1024):.1f} MB) to upload")
+        uploaded_objects: list[S3UploadedObject] = []
 
-        # Create progress bars
-        overall_pbar: tqdm
-        file_pbar: tqdm
-
+        # 2. Setup Progress Bars
+        # position=0 is the bottom bar, position=1 is the one above it
+        overall_pbar = None
         if show_progress:
-            try:
-                overall_pbar = tqdm(total=total_size, unit="B", unit_scale=True, desc="Overall Progress", position=0, leave=True)
-            except ImportError:
-                print("Warning: tqdm not installed. Install with 'pip install tqdm' for progress bars.")
-                show_progress = False
+            overall_pbar = tqdm(total=total_size, unit="B", unit_scale=True, desc="Total Progress", position=0)
 
-        # Walk through all files in the directory
-        for file_info in all_files:
-            # Calculate relative path from the base folder
-            relative_path = file_info.file_path.relative_to(local_path)
+        callback = S3ProgressCallback(overall_pbar) if overall_pbar else None
+
+        # 3. Upload Loop
+        for file_path, file_size in all_files:
+            relative_path = file_path.relative_to(local_path)
             s3_key = f"{destination_folder}/{relative_path}".replace("\\", "/")
 
+            file_pbar = None
+            if show_progress:
+                # Individual file progress (clears when done due to leave=False)
+                file_pbar = tqdm(total=file_size, unit="B", unit_scale=True, desc=f"Uploading {file_path.name}", position=1, leave=False)
+
             try:
-                if show_progress:
-                    # Create individual file progress bar
-                    file_pbar = tqdm(
-                        total=file_info.file_size, unit="B", unit_scale=True, desc=f"Uploading {file_info.file_path.name}", position=1, leave=False
-                    )
+                # Wrap the callback to update both the overall pbar AND the file pbar
+                def combined_callback(bytes_amount: int) -> None:
+                    if callback:
+                        callback(bytes_amount)
+                    if file_pbar:
+                        file_pbar.update(bytes_amount)
 
-                    class ProgressCallback:
-                        """Callback class for tracking upload progress."""
+                self.s3.upload_file(str(file_path), bucket_name, s3_key, Callback=combined_callback)
 
-                        def __init__(self, filename: str, file_size: int, pbar: tqdm) -> None:
-                            self.filename = filename
-                            self.file_size = file_size
-                            self.pbar = pbar
-                            self.bytes_transferred = 0
-                            self._lock = threading.Lock()
-
-                        def __call__(self, bytes_amount: int) -> None:
-                            with self._lock:
-                                self.bytes_transferred += bytes_amount
-                                if self.pbar:
-                                    self.pbar.update(bytes_amount)
-
-                    # Create callback for progress tracking
-                    callback = ProgressCallback(file_info.file_path.name, file_info.file_size, overall_pbar)
-
-                    # Upload with progress callback
-                    self.s3.upload_file(str(file_info.file_path), bucket_name, s3_key, Callback=callback)
-
-                    file_pbar.update(file_info.file_size)  # Complete the file progress bar
-                    file_pbar.close()
-                else:
-                    print(f"Uploading {file_info.file_path} -> s3://{bucket_name}/{s3_key}")
-                    self.s3.upload_file(str(file_info.file_path), bucket_name, s3_key)
-
-                uploaded_files += 1
-
-                # Store uploaded file info
-                download_url = self.generate_download_url(bucket_name, s3_key, region)
-                uploaded_objects.append(S3UploadedObject(file_info.file_path, s3_key, download_url, file_info.file_size))
+                # Store metadata
+                url = self.generate_download_url(bucket_name, s3_key, region)
+                uploaded_objects.append(S3UploadedObject(file_path, s3_key, url, file_size))
 
             except ClientError as e:
-                if show_progress and file_pbar:
+                print(f"\nError uploading {file_path.name}: {e}")
+            finally:
+                if file_pbar:
                     file_pbar.close()
-                print(f"Error uploading {file_info.file_path}: {e}")
-                continue
 
-        if show_progress and overall_pbar:
+        if overall_pbar:
             overall_pbar.close()
 
-        print(f"Successfully uploaded {uploaded_files} files to s3://{bucket_name}/{destination_folder}/")
-        return uploaded_files > 0, uploaded_objects
+        return len(uploaded_objects) > 0, uploaded_objects
 
     def generate_download_url(self, bucket_name: str, s3_key: str, region: str = "") -> str:
         """Generate a direct download URL for an S3 object."""
@@ -259,16 +231,18 @@ class S3Client:
     def delete_folder_from_s3(self, bucket_name: str, folder_name: str) -> None:
         """Delete all objects in a folder from S3."""
         try:
-            # List all objects with the folder prefix
-            objects_to_delete = self.get_bucket_files(bucket_name, f"{folder_name}/")
+            keys_to_delete = self.get_bucket_files(bucket_name, f"{folder_name}/")
 
-            if objects_to_delete:
-                # Delete objects in batches of 1000 (S3 limit)
-                for i in range(0, len(objects_to_delete), 1000):
-                    batch = objects_to_delete[i : i + 1000]
+            if keys_to_delete:
+                # Transform List[str] -> List[dict] for S3 API compatibility
+                # Format: [{'Key': 'file1.txt'}, {'Key': 'file2.txt'}]
+                delete_list: list[ObjectIdentifierTypeDef] = [{"Key": key} for key in keys_to_delete]
+
+                for i in range(0, len(delete_list), 1000):
+                    batch = delete_list[i : i + 1000]
                     self.s3.delete_objects(Bucket=bucket_name, Delete={"Objects": batch})
 
-                print(f"Deleted folder '{folder_name}' ({len(objects_to_delete)} objects)")
+                print(f"Deleted folder '{folder_name}' ({len(keys_to_delete)} objects)")
             else:
                 print(f"Folder '{folder_name}' was already empty")
 

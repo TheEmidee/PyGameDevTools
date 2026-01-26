@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
   "boto3",
   "botocore",
+  "boto3-stubs[s3]",
   "invoke",
   "types-invoke",
   "tqdm",
