@@ -1,0 +1,134 @@
+[project]
+name = "GameDevTools"
+dynamic = ["version"]
+description = "Collection of Python tools to help with game development"
+readme.content-type = "text/markdown"
+readme.file = "README.md"
+keywords = [
+  "game development"
+]
+license = {file = "LICENSE"}
+maintainers = [
+  { name = "Michael Delva", email = "michael@emidee.net" },
+]
+authors = [
+  { name = "Michael Delva", email = "michael@emidee.net" },
+]
+requires-python = ">=3.11"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Utilities",
+]
+dependencies = [
+]
+
+urls.Changelog = "https://github.com/TheEmidee/PyGameDevTools/releases"
+urls.Homepage = "https://github.com/TheEmidee/PyGameDevTools"
+urls.Source = "https://github.com/TheEmidee/PyGameDevTools"
+urls.Tracker = "https://github.com/TheEmidee/PyGameDevTools/issues"
+
+[project.optional-dependencies]
+lint = [ 
+  "ruff",
+  "mypy"
+]
+
+dist = [
+  "hatchling",
+  "build",
+  "wheel",
+  "twine",
+  "towncrier"
+]
+
+dev = ["GameDevTools[lint, dist]"]
+
+[tool.ruff]
+line-length = 150
+indent-width = 4
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint]
+select = [
+    "F",   # pyflakes
+    "E",   # pycodestyle
+    "I",   # isort
+    "ANN", # flake8 type annotations
+    "RUF", # ruff-specific rules
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+disallow_untyped_defs = true
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gamedevtools"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+]
+exclude = [
+    "/.git",
+    "/.github",
+    "/.pytest_cache",
+    "/__pycache__",
+]
+
+[project.scripts]
+archive-rotate = "uepyscripts.tools.archives.rotate_archives:main"
+archive-upload = "uepyscripts.tools.archives.upload_archives:main"
+
+[tool.towncrier]
+package = "GameDevTools"
+package_dir = "src"
+filename = "CHANGELOG.md"
+directory = ".changelog"
+underlines = ["", "", ""]
+title_format = "## [{version}] - {project_date}"
+issue_format = "[#{issue}](https://github.com/TheEmidee/PyGameDevTools/issues/{issue})"
+all_bullets = true
+
+[[tool.towncrier.type]]
+name = "Security"
+
+[[tool.towncrier.type]]
+name = "Removed"
+
+[[tool.towncrier.type]]
+name = "Deprecated"
+
+[[tool.towncrier.type]]
+name = "Added"
+
+[[tool.towncrier.type]]
+name = "Changed"
+
+[[tool.towncrier.type]]
+name = "Fixed"
