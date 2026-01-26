@@ -9,6 +9,13 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [1.0.3] - 2026-01-26
+
+### Changed
+
+- Prefixed project scripts with gamedevtools- ([#2](https://github.com/TheEmidee/PyGameDevTools/issues/2))
+
+
 ## [1.0.2] - 2026-01-26
 
 No significant changes.
