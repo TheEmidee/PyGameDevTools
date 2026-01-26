@@ -1,8 +1,3 @@
-## [1.0.0] - 2026-01-26
-
-No significant changes.
-
-
 # Changelog
 
 All notable changes to this package will be documented in this file.
@@ -13,3 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the changes for the upcoming release can be found in <https://github.com/twisted/my-project/tree/main/changelog.d/>.
 
 <!-- towncrier release notes start -->
+
+## [1.0.0] - 2026-01-26
+
+First version of the packages, with the scripts to archive files
