@@ -1,4 +1,4 @@
-# GameDevScripts
+# GameDevTools
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) 
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/) 
@@ -7,7 +7,7 @@
 
 ## Overview ✅
 
-**GameDevScripts** is a collection of Python tools and utilities used in the game development
+**GameDevTools** is a collection of Python tools and utilities used in the game development
 
 ---
 
@@ -15,11 +15,7 @@
 
 - [Features](#features-)
 - [Requirements](#requirements-)
-- [Installation](#installation-)
-- [Quick Start](#quick-start-)
 - [Usage Examples](#usage-examples-)
-- [Continuous Integration](#continuous-integration-)
-- [Engine Installation](#engine-installation-)
 - [Development & Testing](#development--testing-)
 - [Contribution Guide](#contribution-guide-)
 - [Support & Troubleshooting](#support--troubleshooting-)
