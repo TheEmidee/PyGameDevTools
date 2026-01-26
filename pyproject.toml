@@ -109,8 +109,8 @@ exclude = [
 ]
 
 [project.scripts]
-archive-rotate = "uepyscripts.tools.archives.rotate_archives:main"
-archive-upload = "uepyscripts.tools.archives.upload_archives:main"
+gamedevtools-archives-rotate = "gamedevtools.archives.rotate_archives:main"
+gamedevtools-archives-upload = "gamedevtools.archives.upload_archives:main"
 
 [tool.towncrier]
 package = "GameDevTools"

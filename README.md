@@ -57,7 +57,7 @@ Here's an example of how we use these 2 modules in our jenkinsfiles:
 ```groovy
 stage( 'Rotate Archives' ) {
     pwsh """
-        . "Scripts/PyScripts/.venv/Scripts/ue-tools-archives-rotate.exe" `
+        . "Scripts/PyScripts/.venv/Scripts/gamedevtool-archives-rotate.exe" `
           --directory_path = "//nas/Versions/OurGame/Development/WIP" `
           --keep_count = "-1" `
           --folder_output_file_name = "${env.WORKSPACE}/Saved/Temp/latest_archive_Development.txt"
@@ -71,7 +71,7 @@ stage( 'Upload Archives' ) {
     def file = readFile "${env.WORKSPACE}/Saved/Temp/latest_archive_Development.txt"
 
     pwsh """
-        . "Scripts/PyScripts/.venv/Scripts/ue-tools-archives-upload.exe" `
+        . "Scripts/PyScripts/.venv/Scripts/gamedevtool-archives-upload.exe" `
             --local_folder = "${file}" `
             --bucket_name = "artifacts" `
             --region = "eu-west-3" `
