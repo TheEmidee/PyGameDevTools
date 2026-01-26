@@ -9,6 +9,13 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [1.0.1] - 2026-01-26
+
+### Added
+
+- Added type hints for mypy ([#1](https://github.com/TheEmidee/PyGameDevTools/issues/1))
+
+
 ## [1.0.0] - 2026-01-26
 
 First version of the packages, with the scripts to archive files
