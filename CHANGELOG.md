@@ -1,3 +1,8 @@
+## [1.0.0] - 2026-01-26
+
+No significant changes.
+
+
 # Changelog
 
 All notable changes to this package will be documented in this file.
