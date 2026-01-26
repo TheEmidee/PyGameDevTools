@@ -24,6 +24,12 @@ classifiers = [
   "Topic :: Utilities",
 ]
 dependencies = [
+  "boto3",
+  "botocore",
+  "invoke",
+  "types-invoke",
+  "tqdm",
+  "types-tqdm",
 ]
 
 urls.Changelog = "https://github.com/TheEmidee/PyGameDevTools/releases"
