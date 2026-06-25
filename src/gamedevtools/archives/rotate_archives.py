@@ -128,6 +128,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--keep_count",
         type=int,
+        default=10,
         help="Number of directories to keep in the destination folder",
     )
     parser.add_argument(
