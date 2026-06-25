@@ -158,6 +158,10 @@ def main() -> None:
 
     print(f"Source directory : {source_path.name}")
 
+    if not any(source_path.iterdir()):
+        print(f"Source directory '{source_path.name}' is empty. Nothing to move.")
+        sys.exit(1)
+
     # Make sure the destination directory exists
     destination_path.mkdir(parents=True, exist_ok=True)
 
