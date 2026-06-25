@@ -9,6 +9,13 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [1.1.0] - 2026-06-25
+
+### Changed
+
+- rotate_archives now operates on a source and destination directories and don't rename in-place ([#3](https://github.com/TheEmidee/PyGameDevTools/issues/3))
+
+
 ## [1.0.3] - 2026-01-26
 
 ### Changed
