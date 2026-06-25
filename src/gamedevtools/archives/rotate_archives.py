@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-Directory renaming and cleanup script.
+Directory move and cleanup script.
 
-This script renames a given directory to the current date format (yyyyMMdd),
-handles name conflicts by adding incremental suffixes, and cleans up old
-directories keeping only the specified number of most recent ones.
+This script creates a new directory (named using the current date format,
+yyyyMMdd) inside a destination directory, handles name conflicts by adding
+incremental suffixes, moves the contents of a source directory into it, and
+cleans up old directories in the destination directory, keeping only the
+specified number of most recent ones.
 """
 
 import argparse
@@ -82,6 +84,20 @@ def cleanup_old_directories(parent_dir: Path, keep_count: int) -> None:
             print(f"  - Failed to remove {d.name}: {e}")
 
 
+def move_directory_contents(source_dir: Path, target_dir: Path) -> None:
+    """
+    Move all files and subdirectories from source_dir into target_dir.
+
+    Args:
+        source_dir (Path): Directory whose contents will be moved
+        target_dir (Path): Directory the contents will be moved into
+    """
+    for item in source_dir.iterdir():
+        destination_item = target_dir / item.name
+        shutil.move(str(item), str(destination_item))
+        print(f"  - Moved: {item.name}")
+
+
 def write_output_file(output_path: Path, renamed_folder_path: Path) -> None:
     """
     Writes the path of the last folder in the output path.
@@ -106,12 +122,14 @@ def write_output_file(output_path: Path, renamed_folder_path: Path) -> None:
 def parse_arguments() -> argparse.Namespace:
     """Parse command line arguments."""
 
-    parser = argparse.ArgumentParser(description="Rename directory to current date and cleanup old directories")
-    parser.add_argument("--directory_path", help="Path to the directory to rename")
+    parser = argparse.ArgumentParser(description="Move contents of a source directory into a new date-named directory and cleanup old directories")
+    parser.add_argument("--source_directory", help="Path to the directory whose contents should be moved")
+    parser.add_argument("--destination_directory", help="Path to the directory where the new date-named directory will be created")
     parser.add_argument(
         "--keep_count",
         type=int,
-        help="Number of directories to keep in the parent folder",
+        default=10,
+        help="Number of directories to keep in the destination folder",
     )
     parser.add_argument(
         "--folder_output_file_name",
@@ -125,8 +143,9 @@ def parse_arguments() -> argparse.Namespace:
 def main() -> None:
     args = parse_arguments()
 
-    # Convert to Path object
-    source_path = Path(args.directory_path).resolve()
+    # Convert to Path objects
+    source_path = Path(args.source_directory).resolve()
+    destination_path = Path(args.destination_directory).resolve()
 
     # Check if the source directory exists
     if not source_path.exists():
@@ -137,28 +156,39 @@ def main() -> None:
         print(f"Error: '{source_path}' is not a directory.")
         sys.exit(1)
 
-    print(f"Directory path : {source_path.name}")
+    print(f"Source directory : {source_path.name}")
 
-    # Get parent directory and current date name
-    parent_dir = source_path.parent
+    if not any(source_path.iterdir()):
+        print(f"Source directory '{source_path.name}' is empty. Nothing to move.")
+        sys.exit(1)
+
+    # Make sure the destination directory exists
+    destination_path.mkdir(parents=True, exist_ok=True)
+
+    # Get current date name
     date_name = get_date_formatted_name()
 
-    # Find available name (handle conflicts)
-    new_name = find_available_name(parent_dir, date_name)
-    new_path = parent_dir / new_name
+    # Find available name (handle conflicts) inside the destination directory
+    new_name = find_available_name(destination_path, date_name)
+    new_path = destination_path / new_name
 
-    # Rename the directory
+    # Create the new directory and move the source directory's contents into it
     try:
-        source_path.rename(new_path)
-        print(f"Successfully renamed '{source_path.name}' to '{new_name}'")
+        new_path.mkdir(parents=True, exist_ok=False)
+        print(f"Created new directory: '{new_path}'")
+
+        print(f"Moving contents of '{source_path.name}' into '{new_name}'...")
+        move_directory_contents(source_path, new_path)
+
+        print(f"Successfully moved contents of '{source_path.name}' to '{new_name}'")
 
         if args.folder_output_file_name:
             write_output_file(args.folder_output_file_name, new_path)
     except Exception as e:
-        print(f"Error renaming directory: {e}")
+        print(f"Error moving directory contents: {e}")
         sys.exit(1)
 
-    cleanup_old_directories(parent_dir, args.keep_count)
+    cleanup_old_directories(destination_path, args.keep_count)
 
     print("\nOperation completed successfully!")
 
