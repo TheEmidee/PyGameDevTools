@@ -248,3 +248,47 @@ class S3Client:
 
         except ClientError as e:
             print(f"Error deleting folder '{folder_name}': {e}")
+
+    def delete_keys(self, bucket_name: str, keys: List[str]) -> None:
+        """Delete an arbitrary list of object keys, batched to S3's 1000-key limit."""
+        if not keys:
+            return
+        delete_list: list[ObjectIdentifierTypeDef] = [{"Key": key} for key in keys]
+        for i in range(0, len(delete_list), 1000):
+            batch = delete_list[i : i + 1000]
+            self.s3.delete_objects(Bucket=bucket_name, Delete={"Objects": batch})
+        print(f"Deleted {len(keys)} object(s)")
+
+    def object_exists(self, bucket_name: str, key: str) -> bool:
+        try:
+            self.s3.head_object(Bucket=bucket_name, Key=key)
+            return True
+        except ClientError as e:
+            if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
+                return False
+            raise
+
+    def upload_file(self, bucket_name: str, key: str, file_path: Path, content_type: Optional[str] = None) -> None:
+        """Upload a file from disk directly to S3, streaming rather than
+        loading it fully into memory first (unlike upload_bytes)."""
+        extra_args = {"ContentType": content_type} if content_type else {}
+        self.s3.upload_file(str(file_path), bucket_name, key, ExtraArgs=extra_args)
+
+    def upload_bytes(self, bucket_name: str, key: str, data: bytes, content_type: Optional[str] = None) -> None:
+        extra_args = {"ContentType": content_type} if content_type else {}
+        self.s3.put_object(Bucket=bucket_name, Key=key, Body=data, **extra_args)
+
+    def download_bytes(self, bucket_name: str, key: str) -> bytes:
+        response = self.s3.get_object(Bucket=bucket_name, Key=key)
+        return response["Body"].read()
+
+    def download_json(self, bucket_name: str, key: str, default=None):
+        import json
+        try:
+            return json.loads(self.download_bytes(bucket_name, key))
+        except ClientError as e:
+            if e.response["Error"]["Code"] in ("404", "NoSuchKey"):
+                if default is not None:
+                    return default
+                raise
+            raise
