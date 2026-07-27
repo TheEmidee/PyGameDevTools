@@ -1,0 +1,1 @@
+Added new functions to S3Client
