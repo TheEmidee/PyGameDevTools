@@ -275,15 +275,18 @@ class S3Client:
         self.s3.upload_file(str(file_path), bucket_name, key, ExtraArgs=extra_args)
 
     def upload_bytes(self, bucket_name: str, key: str, data: bytes, content_type: Optional[str] = None) -> None:
-        extra_args = {"ContentType": content_type} if content_type else {}
-        self.s3.put_object(Bucket=bucket_name, Key=key, Body=data, **extra_args)
+        if content_type:
+            self.s3.put_object(Bucket=bucket_name, Key=key, Body=data, ContentType=content_type)
+        else:
+            self.s3.put_object(Bucket=bucket_name, Key=key, Body=data)
 
     def download_bytes(self, bucket_name: str, key: str) -> bytes:
         response = self.s3.get_object(Bucket=bucket_name, Key=key)
         return response["Body"].read()
 
-    def download_json(self, bucket_name: str, key: str, default=None):
+    def download_json(self, bucket_name: str, key: str, default: object = None) -> object:
         import json
+
         try:
             return json.loads(self.download_bytes(bucket_name, key))
         except ClientError as e:
