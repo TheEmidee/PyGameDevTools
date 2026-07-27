@@ -9,6 +9,13 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 
 <!-- towncrier release notes start -->
 
+## [1.2.0] - 2026-07-27
+
+### Added
+
+- Added new functions to S3Client ([#4](https://github.com/TheEmidee/PyGameDevTools/issues/4))
+
+
 ## [1.1.0] - 2026-06-25
 
 ### Changed
